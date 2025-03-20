@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的習慣追蹤器</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .habit-form {
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .habits-list {
+            margin-top: 30px;
+        }
+
+        .habit-item {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .habit-item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .habit-actions {
+            margin-top: 10px;
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            height: 20px;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #2ecc71;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .calendar {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .day {
+            width: 30px;
+            height: 30px;
+            margin: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .checked {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .stats {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .milestone {
+            color: #2ecc71;
+            font-style: italic;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>我的習慣追蹤器</h1>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="habits">習慣管理</div>
+            <div class="tab" data-tab="stats">統計資料</div>
+        </div>
+
+        <div class="tab-content active" id="habits-tab">
+            <div class="habit-form">
+                <h2>新增習慣</h2>
+                <div class="input-group">
+                    <label for="habit-name">習慣名稱：</label>
+                    <input type="text" id="habit-name" placeholder="例如：不喝飲料" required>
+                </div>
+                <div class="input-group">
+                    <label for="habit-goal">目標天數：</label>
+                    <input type="number" id="habit-goal" min="1" value="30" required>
+                </div>
+                <div class="input-group">
+                    <label for="habit-type">類型：</label>
+                    <select id="habit-type">
+                        <option value="quit">戒除壞習慣</option>
+                        <option value="build">養成好習慣</option>
+                    </select>
+                </div>
+                <button id="add-habit">新增習慣</button>
+            </div>
+
+            <div class="habits-list" id="habits-container">
+                <!-- 習慣列表將在這裡動態生成 -->
+            </div>
+        </div>
+
+        <div class="tab-content" id="stats-tab">
+            <h2>習慣統計</h2>
+            <div id="stats-container">
+                <!-- 統計資料將在這裡動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 儲存習慣的陣列
+        let habits = JSON.parse(localStorage.getItem('habits')) || [];
+
+        // DOM 元素
+        const habitNameInput = document.getElementById('habit-name');
+        const habitGoalInput = document.getElementById('habit-goal');
+        const habitTypeSelect = document.getElementById('habit-type');
+        const addHabitButton = document.getElementById('add-habit');
+        const habitsContainer = document.getElementById('habits-container');
+        const statsContainer = document.getElementById('stats-container');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // 切換頁籤功能
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+
+                // 移除所有頁籤的活躍狀態
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // 設置當前頁籤為活躍
+                tab.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+
+                // 如果切換到統計頁籤，更新統計資料
+                if (tabId === 'stats') {
+                    updateStats();
+                }
+            });
+        });
+
+        // 新增習慣
+        addHabitButton.addEventListener('click', () => {
+            const name = habitNameInput.value.trim();
+            const goal = parseInt(habitGoalInput.value);
+            const type = habitTypeSelect.value;
+
+            if (name && goal > 0) {
+                const habit = {
+                    id: Date.now(),
+                    name,
+                    goal,
+                    type,
+                    startDate: new Date().toISOString(),
+                    checkedDays: [],
+                    currentStreak: 0,
+                    bestStreak: 0
+                };
+
+                habits.push(habit);
+                saveHabits();
+                renderHabits();
+
+                // 清空輸入欄位
+                habitNameInput.value = '';
+                habitGoalInput.value = '30';
+            } else {
+                alert('請填寫習慣名稱和有效的目標天數！');
+            }
+        });
+
+        // 儲存習慣到本地儲存
+        function saveHabits() {
+            localStorage.setItem('habits', JSON.stringify(habits));
+        }
+
+        // 渲染習慣列表
+        function renderHabits() {
+            habitsContainer.innerHTML = '';
+
+            if (habits.length === 0) {
+                habitsContainer.innerHTML = '<p>尚未添加任何習慣。請在上方新增你的第一個習慣！</p>';
+                return;
+            }
+
+            habits.forEach(habit => {
+                const daysChecked = habit.checkedDays.length;
+                const progress = Math.min((daysChecked / habit.goal) * 100, 100);
+                const daysSinceStart = getDaysSinceStart(habit.startDate);
+
+                const habitElement = document.createElement('div');
+                habitElement.className = 'habit-item';
+                habitElement.innerHTML = `
+                    <button class="delete-btn" data-id="${habit.id}">×</button>
+                    <h3>${habit.name}</h3>
+                    <p>類型：${habit.type === 'quit' ? '戒除壞習慣' : '養成好習慣'}</p>
+                    <p>開始日期：${formatDate(new Date(habit.startDate))}</p>
+                    <p>目標：${habit.goal} 天</p>
+                    <p>已持續：${daysChecked} 天（總進度 ${Math.round(progress)}%）</p>
+                    <p>當前連續：${habit.currentStreak} 天</p>
+                    <p>最佳紀錄：${habit.bestStreak} 天</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${progress}%"></div>
+                    </div>
+                    
+                    <div class="calendar">
+                        ${generateCalendar(habit, daysSinceStart)}
+                    </div>
+                    
+                    <div class="habit-actions">
+                        <button class="check-today-btn" data-id="${habit.id}">
+                            ${isCheckedToday(habit) ? '取消今日標記' : '標記今日已完成'}
+                        </button>
+                    </div>
+                    
+                    ${progress >= 100 ? '<p class="milestone">恭喜！你已達成目標！</p>' : ''}
+                `;
+
+                habitsContainer.appendChild(habitElement);
+            });
+
+            // 為刪除按鈕添加事件監聽器
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.getAttribute('data-id'));
+                    deleteHabit(id);
+                });
+            });
+
+            // 為標記今日按鈕添加事件監聽器
+            document.querySelectorAll('.check-today-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.getAttribute('data-id'));
+                    toggleTodayCheck(id);
+                });
+            });
+
+            // 為日曆日期添加事件監聽器
+            document.querySelectorAll('.day').forEach(day => {
+                day.addEventListener('click', (e) => {
+                    const habitId = parseInt(e.target.getAttribute('data-habit-id'));
+                    const date = e.target.getAttribute('data-date');
+                    toggleDateCheck(habitId, date);
+                });
+            });
+        }
+
+        // 生成日曆
+        function generateCalendar(habit, daysCount) {
+            const maxDays = Math.min(30, daysCount + 1); // 最多顯示30天
+            let calendarHTML = '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i < maxDays; i++) {
+                // 計算日期
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                // 檢查是否已標記
+                const isChecked = habit.checkedDays.includes(dateStr);
+
+                calendarHTML += `
+                    <div class="day ${isChecked ? 'checked' : ''}" 
+                         data-habit-id="${habit.id}" 
+                         data-date="${dateStr}">
+                        ${date.getDate()}
+                    </div>
+                `;
+            }
+
+            return calendarHTML;
+        }
+
+        // 切換今日標記
+        function toggleTodayCheck(habitId) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
+
+            toggleDateCheck(habitId, todayStr);
+        }
+
+        // 切換指定日期的標記
+        function toggleDateCheck(habitId, dateStr) {
+            const habitIndex = habits.findIndex(h => h.id === habitId);
+            if (habitIndex === -1) return;
+
+            const dateIndex = habits[habitIndex].checkedDays.indexOf(dateStr);
+
+            if (dateIndex === -1) {
+                // 添加日期
+                habits[habitIndex].checkedDays.push(dateStr);
+                habits[habitIndex].checkedDays.sort(); // 確保日期排序
+            } else {
+                // 移除日期
+                habits[habitIndex].checkedDays.splice(dateIndex, 1);
+            }
+
+            // 更新連續天數
+            updateStreaks(habitIndex);
+
+            saveHabits();
+            renderHabits();
+        }
+
+        // 更新連續天數
+        function updateStreaks(habitIndex) {
+            const habit = habits[habitIndex];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 排序日期
+            const sortedDates = [...habit.checkedDays].sort();
+
+            // 計算當前連續天數
+            let currentStreak = 0;
+            for (let i = 0; i <= 30; i++) { // 檢查最多30天
+                const checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - i);
+                const dateStr = checkDate.toISOString().split('T')[0];
+
+                if (habit.checkedDays.includes(dateStr)) {
+                    currentStreak++;
+                } else {
+                    break;
+                }
+            }
+
+            habit.currentStreak = currentStreak;
+            habit.bestStreak = Math.max(habit.bestStreak, currentStreak);
+        }
+
+        // 檢查今日是否已標記
+        function isCheckedToday(habit) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
+
+            return habit.checkedDays.includes(todayStr);
+        }
+
+        // 獲取自開始日期以來的天數
+        function getDaysSinceStart(startDateStr) {
+            const startDate = new Date(startDateStr);
+            const today = new Date();
+
+            // 計算相差的毫秒數
+            const diffTime = Math.abs(today - startDate);
+            // 轉換為天數
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            return diffDays;
+        }
+
+        // 格式化日期
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 刪除習慣
+        function deleteHabit(id) {
+            if (confirm('確定要刪除這個習慣嗎？所有相關數據將被永久刪除。')) {
+                habits = habits.filter(habit => habit.id !== id);
+                saveHabits();
+                renderHabits();
+            }
+        }
+
+        // 更新統計資料
+        function updateStats() {
+            statsContainer.innerHTML = '';
+
+            if (habits.length === 0) {
+                statsContainer.innerHTML = '<p>尚未添加任何習慣。</p>';
+                return;
+            }
+
+            // 計算完成率最高的習慣
+            let highestCompletionRate = 0;
+            let highestCompletionHabit = null;
+
+            // 計算最長連續天數的習慣
+            let longestStreakDays = 0;
+            let longestStreakHabit = null;
+
+            habits.forEach(habit => {
+                const daysChecked = habit.checkedDays.length;
+                const daysSinceStart = getDaysSinceStart(habit.startDate);
+                const completionRate = daysSinceStart > 0 ? (daysChecked / daysSinceStart) * 100 : 0;
+
+                if (completionRate > highestCompletionRate) {
+                    highestCompletionRate = completionRate;
+                    highestCompletionHabit = habit;
+                }
+
+                if (habit.bestStreak > longestStreakDays) {
+                    longestStreakDays = habit.bestStreak;
+                    longestStreakHabit = habit;
+                }
+            });
+
+            // 創建統計卡片
+            const statsHTML = `
+                <div class="habit-item">
+                    <h3>總覽</h3>
+                    <p>追蹤習慣數量：${habits.length}</p>
+                    <p>戒除習慣：${habits.filter(h => h.type === 'quit').length} 個</p>
+                    <p>養成習慣：${habits.filter(h => h.type === 'build').length} 個</p>
+                </div>
+                
+                ${highestCompletionHabit ? `
+                <div class="habit-item">
+                    <h3>完成率最高的習慣</h3>
+                    <p>習慣：${highestCompletionHabit.name}</p>
+                    <p>完成率：${Math.round(highestCompletionRate)}%</p>
+                </div>
+                ` : ''}
+                
+                ${longestStreakHabit ? `
+                <div class="habit-item">
+                    <h3>最長連續記錄</h3>
+                    <p>習慣：${longestStreakHabit.name}</p>
+                    <p>連續天數：${longestStreakDays} 天</p>
+                </div>
+                ` : ''}
+            `;
+
+            statsContainer.innerHTML = statsHTML;
+        }
+
+        // 初始渲染
+        renderHabits();
+    </script>
+</body>
+
+</html>
